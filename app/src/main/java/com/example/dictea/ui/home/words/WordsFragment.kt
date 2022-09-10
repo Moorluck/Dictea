@@ -1,5 +1,6 @@
 package com.example.dictea.ui.home.words
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -9,12 +10,17 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.dictea.adapters.WordsAdapter
 import com.example.dictea.databinding.FragmentWordsBinding
+import com.example.dictea.helpers.AudioHelper
 import com.example.dictea.models.Word
 import com.example.dictea.ui.home.WordViewModel
 import com.example.dictea.ui.home.WordViewModelFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // TODO: Rename parameter arguments, choose names that match
 // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -35,8 +41,6 @@ class WordsFragment : Fragment() {
 
     private lateinit var adapter : WordsAdapter
 
-    private var words = listOf<Word>()
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -50,21 +54,27 @@ class WordsFragment : Fragment() {
         return binding.root
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     private fun bindViewModel() {
         viewModel.Words.observe(viewLifecycleOwner) {
-            Log.d("WordsFragment", it.toString())
             adapter.updateWords(it)
         }
-
-        viewModel.getWords()
     }
 
     private fun bindRv() {
         binding.rvWordsFragmentWords.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-        adapter = WordsAdapter(words) {
-            Log.d("WordsFragment", it.toString())
+        adapter = WordsAdapter(listOf(), {
             viewModel.deleteWord(it)
-        }
+        }, {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    AudioHelper.playAudio(requireContext(), it.audio)
+                }
+            }
+        })
         binding.rvWordsFragmentWords.adapter = adapter
     }
 
@@ -81,9 +91,6 @@ class WordsFragment : Fragment() {
                 binding.btnAddFragmentWords.isEnabled = true
 
                 if (word == null) return@testWord
-
-                Log.d("Frag", word.word)
-                Log.d("Frag", binding.tiWordFragmentWords.text.toString())
 
                 if (wordToTest == word.word) {
                     viewModel.saveWord(word)

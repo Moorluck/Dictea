@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WordDAO {
     @Query("SELECT * FROM Word ORDER BY word")
-    fun getWords() : Flow<List<Word>>
+    fun getWordsOrderByName() : Flow<List<Word>>
 
     @Delete()
     fun deleteWord(word : Word)

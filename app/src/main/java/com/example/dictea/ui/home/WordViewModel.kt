@@ -8,9 +8,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.dictea.api.LingueeApi
 import com.example.dictea.api.RetrofitClient
 import com.example.dictea.api.models.Result
+import com.example.dictea.api.repository.LingueeRepository
 import com.example.dictea.db.dao.DictationDAO
 import com.example.dictea.db.dao.WordDAO
 import com.example.dictea.mappers.ApiMapper
+import com.example.dictea.models.Dictation
 import com.example.dictea.models.DictationWord
 import com.example.dictea.models.Word
 import kotlinx.coroutines.Dispatchers
@@ -34,40 +36,20 @@ class WordViewModel(private val wordDao: WordDAO, private val dictationDAO: Dict
 
     private var api: LingueeApi = RetrofitClient.client.create(LingueeApi::class.java)
 
+    init {
+        getWords()
+        getDictation()
+    }
+
     fun testWord(word : String, cb : (w : Word?) -> Unit) {
         viewModelScope.launch {
-            api.getWord(word)
-                .enqueue(object : Callback<List<Result>> {
-                    override fun onResponse(
-                        call: Call<List<Result>>,
-                        response: Response<List<Result>>
-                    ) {
-                        if (response.body() != null && response.body()!!.isNotEmpty()) {
-                            val newWord = response.body()?.let { ApiMapper.toWord(it) }
-                            if (newWord != null) {
-                                cb(newWord)
-                            }
-                            else {
-                                cb(null)
-                            }
-                        }
-                        else {
-                            cb(null)
-                        }
-                    }
-
-                    override fun onFailure(call: Call<List<Result>>, t: Throwable) {
-                        Log.d("WordVM", "Word not inserted !")
-                        cb(null)
-                    }
-
-                })
+            LingueeRepository.testWord(word, api, cb)
         }
     }
 
-    fun getWords() {
+    private fun getWords() {
         viewModelScope.launch {
-            wordDao.getWords().collect() {
+            wordDao.getWordsOrderByName().collect() {
                 _words.clear()
                 _words.addAll(it)
                 words.value = _words
@@ -93,7 +75,7 @@ class WordViewModel(private val wordDao: WordDAO, private val dictationDAO: Dict
         }
     }
 
-    fun getDictation() {
+    private fun getDictation() {
         viewModelScope.launch {
             dictationDAO.getDictations().collect() {
                 _dictations.clear()
@@ -103,9 +85,29 @@ class WordViewModel(private val wordDao: WordDAO, private val dictationDAO: Dict
         }
     }
 
-    fun saveDictation() {
+    fun saveDictation(dictation: Dictation, words : List<Word>) {
         viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val index = dictationDAO.insertDictation(dictation)
+                for (word in words) {
+                    word.dictationId = index.toInt()
+                    wordDao.insertWord(word)
+                }
+                getDictation()
+            }
+        }
+    }
 
+    fun deleteWordsFromDictation(wordsToSuppress : List<String>) {
+        viewModelScope.launch {
+            for (word in wordsToSuppress) {
+                val wordToSuppress = _words.find { it.word == word }
+                wordToSuppress?.dictationId = null
+                if (wordToSuppress != null) {
+                    saveWord(wordToSuppress)
+                }
+            }
+            words.value = _words
         }
     }
 

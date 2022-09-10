@@ -9,7 +9,7 @@ import com.example.dictea.db.dao.WordDAO
 import com.example.dictea.models.Dictation
 import com.example.dictea.models.Word
 
-@Database(entities = [Word::class, Dictation::class], version = 2, exportSchema = false)
+@Database(entities = [Word::class, Dictation::class], version = 6, exportSchema = false)
 abstract class DbHelper : RoomDatabase() {
     abstract fun words() : WordDAO
     abstract fun dictations() : DictationDAO

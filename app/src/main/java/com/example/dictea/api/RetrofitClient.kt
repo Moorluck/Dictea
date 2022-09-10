@@ -16,7 +16,7 @@ object RequestInterceptor: Interceptor {
 object RetrofitClient {
     private const val TAG = "RetrofitClient"
 
-    private const val BASE_URL = "https://linguee-api-v2.herokuapp.com/api/v2/"
+    private const val BASE_URL = "https://dictea.herokuapp.com/api/v2/"
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient().newBuilder()
